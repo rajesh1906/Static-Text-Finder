@@ -16,13 +16,15 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class StaticTextFinder {
 
-    private static final String OUTPUT_FILE_NAME = "StaticTextFinder1.xls";//output xl sheet file name
+    private static final String OUTPUT_FILE_NAME = "StaticTextFinder.xls";//output xl sheet file name
     public static List<StaticText> fileNames, fileNamesEmpty;
     public static final String DIRECTORY_PROJECT = "D:\\Shoppix new\\app-kantar\\src\\main\\java\\"; // Project location to trace hardcoded text
 
@@ -80,10 +82,11 @@ public class StaticTextFinder {
             while ((line = bufferedReader.readLine()) != null) {
                 if (isRegexValid(line) != null && (!line.contains("@") && !line.contains("Log.") && !line.startsWith("//"))) {
                     System.out.println("File Data : " + line);
-                    staticText = new StaticText(file.getAbsolutePath().trim(), line.trim(), isRegexValid(line.trim()));
+                    staticText = new StaticText(file.getAbsolutePath().substring(file.getAbsolutePath().trim().lastIndexOf("\\")+1),file.getAbsolutePath().trim(), line.trim(), isRegexValid(line.trim()));
                     fileNames.add(staticText);
                 }else{
-                    fileNamesEmpty.add(new StaticText(file.getAbsolutePath(), "", ""));
+
+                    fileNamesEmpty.add(new StaticText(file.getAbsolutePath().substring(file.getAbsolutePath().trim().lastIndexOf("\\")+1),file.getAbsolutePath(), "", ""));
                 }
 
             }
@@ -98,13 +101,13 @@ public class StaticTextFinder {
         Pattern p = Pattern.compile("\"([^\"]*)\"");
         Matcher m = p.matcher(line);
         while (m.find()) {
-            return m.group(1).length() >0 ?m.group(1):null;
+            return m.group(1).length() >1 ?m.group(1):null;
         }
         return null;
     }
 
     private void generateSheet(List<StaticText> fileNames) throws IOException {
-        String[] columns = {"File Name", "Content", "Hard Coded"};
+        String[] columns = {"File Name","File Path", "Code Snippet", "Hard Coded String"};
         // Create a Workbook
         Workbook workbook = new HSSFWorkbook(); // new XSSFWorkbook() for generating `.xls` file
 
@@ -145,6 +148,8 @@ public class StaticTextFinder {
 
 
         processSheet(sheet,fileNames);
+        Set<StaticText> setEmpty= new HashSet<>(fileNamesEmpty);
+        fileNamesEmpty = new ArrayList<>(setEmpty);
         processSheet(sheetNA,fileNamesEmpty);
 
         // Write the output to a file
@@ -163,14 +168,18 @@ public class StaticTextFinder {
         for (StaticText fileName : fileNames) {
             Row row = sheet.createRow(rowNum++);
 
+
             row.createCell(0)
                     .setCellValue(fileName.fileName);
 
+            row.createCell(1)
+                    .setCellValue(fileName.filePath);
+
             if (fileName.line == null)
-                row.createCell(1)
+                row.createCell(2)
                         .setCellValue("");
             else
-                row.createCell(1)
+                row.createCell(2)
                         .setCellValue(fileName.line.substring(0, fileName.line.length() > 100 ? 100 : fileName.line.length()));
 
 
@@ -179,10 +188,10 @@ public class StaticTextFinder {
             //dateOfBirthCell.setCellStyle(dateCellStyle);
 
             if (fileName.staticText == null)
-                row.createCell(2)
+                row.createCell(3)
                         .setCellValue("");
             else
-                row.createCell(2)
+                row.createCell(3)
                         .setCellValue(fileName.staticText.substring(0, fileName.staticText.length() > 100 ? 100 : fileName.staticText.length()));
         }
 
